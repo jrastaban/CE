@@ -102,7 +102,7 @@ public class ESManager implements Constants {
 
         Map<String, Object> status = new LinkedHashMap<>();
         List<String> errors = new ArrayList<>();
-        String actionTemplate = "{ \"index\" : { \"_index\" : \"%s\", \"_type\" : \"%s\", \"_id\" : \"%s\" } }%n";
+        String actionTemplate = "{ \"index\" : { \"_index\" : \"%s\", \"_id\" : \"%s\" } }%n";
 
         LOGGER.info("*********UPLOADING*** {}" ,type);
 
@@ -116,9 +116,9 @@ public class ESManager implements Constants {
 
                 String id = Util.concatenate(doc, _keys, "_");
                 StringBuilder _doc = new StringBuilder(createESDoc(doc));
-                _doc.deleteCharAt(_doc.length() - 1); 
+                _doc.deleteCharAt(_doc.length() - 1);
                 _doc.append(",\"latest\":true,\"_loaddate\":\"" + loaddate + "\" }");
-                bulkRequest.append(String.format(actionTemplate, index, type, id));
+                bulkRequest.append(String.format(actionTemplate, index, id));
                 bulkRequest.append(_doc + "\n");
                 i++;
                 if (i % 1000 == 0 || bulkRequest.toString().getBytes().length / (1024 * 1024) > 5) {
@@ -393,40 +393,107 @@ public class ESManager implements Constants {
      */
     public static void configureIndexAndTypes(String ds, List<Map<String, String>> errorList) {
 
-        String _payLoad = "{\"settings\" : { \"number_of_shards\" : 1,\"number_of_replicas\" : 1 },\"mappings\": {";
+//        String _payLoad = "{\"settings\" : { \"number_of_shards\" : 1,\"number_of_replicas\" : 1 },\"mappings\": {";
+//
+//        Set<String> types = ConfigManager.getTypes(ds);
+//        Iterator<String> it = types.iterator();
+//        while (it.hasNext()) {
+//            String _type = it.next();
+//            String indexName = ds+ "_" + _type;
+//            if (!indexExists(indexName)) {
+//                StringBuilder payLoad = new StringBuilder(_payLoad);
+//                payLoad.append("\"" + _type + "\":{},\"issue_" + _type + "\": { \"_parent\": {\"type\": \"" + _type
+//                        + "\"}},\"issue_" + _type + "_audit\": { \"_parent\": {\"type\": \"issue_" + _type
+//                        + "\"}},\"issue_" + _type + "_comment\": { \"_parent\": {\"type\": \"issue_" + _type
+//                        + "\"}},\"issue_" + _type + "_exception\": { \"_parent\": {\"type\": \"issue_" + _type
+//                        + "\"}}");
+//                payLoad.append("}}");
+//                try {
+//                    invokeAPI("PUT", indexName, payLoad.toString());
+//                } catch (IOException e) {
+//                    LOGGER.error("Error in configureIndexAndTypes",e);
+//                    Map<String,String> errorMap = new HashMap<>();
+//                    errorMap.put(ERROR, "Error in configureIndexAndTypes");
+//                    errorMap.put(ERROR_TYPE, WARN);
+//                    errorMap.put(EXCEPTION, e.getMessage());
+//                    errorList.add(errorMap);
+//                }
+//            }
+//            try {
+//				invokeAPI("PUT", "/" + indexName + "/_alias/" + ds, null);
+//				invokeAPI("PUT", "/" + indexName + "/_alias/" + "ds-all", null);
+//			} catch (IOException e) {
+//
+//			}
+//        }
 
+        // new code as per the latest ES version changes.
         Set<String> types = ConfigManager.getTypes(ds);
         Iterator<String> it = types.iterator();
         while (it.hasNext()) {
             String _type = it.next();
-            String indexName = ds+ "_" + _type;
+            String indexName = ds + "_" + _type;
             if (!indexExists(indexName)) {
+                String _payLoad = "{\"settings\" : { \"number_of_shards\" : 1,\"number_of_replicas\" : 1 },\"mappings\": {\"_doc\": {";
+
                 StringBuilder payLoad = new StringBuilder(_payLoad);
-                payLoad.append("\"" + _type + "\":{},\"issue_" + _type + "\": { \"_parent\": {\"type\": \"" + _type
-                        + "\"}},\"issue_" + _type + "_audit\": { \"_parent\": {\"type\": \"issue_" + _type
-                        + "\"}},\"issue_" + _type + "_comment\": { \"_parent\": {\"type\": \"issue_" + _type
-                        + "\"}},\"issue_" + _type + "_exception\": { \"_parent\": {\"type\": \"issue_" + _type
-                        + "\"}}");
-                payLoad.append("}}");
+                payLoad.append("\"dynamic\": false,");
+                payLoad.append("\"properties\": {");
+                payLoad.append("\"type\": {");
+                payLoad.append("\"type\": \"keyword\",");
+                payLoad.append("\"index\": true");
+                payLoad.append("}");
+//                payLoad.append("\"issue_" + _type + "\": {");
+//                payLoad.append("\"type\": \"nested\",");
+//                payLoad.append("\"properties\": {");
+//                payLoad.append("\"_parent\": {");
+//                payLoad.append("\"type\": \"keyword\",");
+//                payLoad.append("\"index\": true");
+//                payLoad.append("}");
+//                payLoad.append("}");
+//                payLoad.append("},");
+//                payLoad.append("\"issue_" + _type + "_audit\": {");
+//                payLoad.append("\"type\": \"nested\",");
+//                payLoad.append("\"properties\": {");
+//                payLoad.append("\"_parent\": {");
+//                payLoad.append("\"type\": \"keyword\",");
+//                payLoad.append("\"index\": true");
+//                payLoad.append("}");
+//                payLoad.append("}");
+//                payLoad.append("},");
+//                payLoad.append("\"issue_" + _type + "_comment\": {");
+//                payLoad.append("\"type\": \"nested\",");
+//                payLoad.append("\"properties\": {");
+//                payLoad.append("\"_parent\": {");
+//                payLoad.append("\"type\": \"keyword\",");
+//                payLoad.append("\"index\": true");
+//                payLoad.append("}");
+//                payLoad.append("}");
+//                payLoad.append("},");
+//                payLoad.append("\"issue_" + _type + "_exception\": {");
+//                payLoad.append("\"type\": \"nested\",");
+//                payLoad.append("\"properties\": {");
+//                payLoad.append("\"_parent\": {");
+//                payLoad.append("\"type\": \"keyword\",");
+//                payLoad.append("\"index\": true");
+//                payLoad.append("}");
+//                payLoad.append("}");
+//                payLoad.append("}");
+                payLoad.append("}");
+                payLoad.append("}}}");
+
+                LOGGER.info("Printing payload before creating the index: {}", payLoad);
                 try {
                     invokeAPI("PUT", indexName, payLoad.toString());
-                } catch (IOException e) {
-                    LOGGER.error("Error in configureIndexAndTypes",e);
-                    Map<String,String> errorMap = new HashMap<>();
-                    errorMap.put(ERROR, "Error in configureIndexAndTypes");
-                    errorMap.put(ERROR_TYPE, WARN);
-                    errorMap.put(EXCEPTION, e.getMessage());
-                    errorList.add(errorMap);
+                    invokeAPI("PUT", "/" + indexName + "/_alias/" + "ds-all", null);
+                } catch (Exception e) {
+                    LOGGER.error("Error while crating the index with payload: {}", payLoad);
+                    LOGGER.error("Index creation Error: {}", e.getMessage());
+                    LOGGER.error("Index creation Error Trace: {}", e.getStackTrace());
                 }
             }
-            try {
-				invokeAPI("PUT", "/" + indexName + "/_alias/" + ds, null);
-				invokeAPI("PUT", "/" + indexName + "/_alias/" + "ds-all", null);
-			} catch (IOException e) {
-				
-			}
         }
-     }
+    }
 
     /**
      * Gets the existing info.
@@ -598,18 +665,40 @@ public class ESManager implements Constants {
             }
         }
     }
-    
+
     /**
      * Creates the type.
      *
-     * @param index the index
-     * @param type the type
+     * @param index  the index
+     * @param type   the type
      * @param parent the parent
      */
-    public static void createType(String index, String type, String parent) {
+//    public static void createType(String index, String type, String parent) {
+//        if (!typeExists(index, type)) {
+//            String endPoint = index + "/_mapping/" + type;
+//            String payLoad = "{\"_parent\": { \"type\": \"" + parent + "\" } }";
+//            try {
+//                invokeAPI("PUT", endPoint, payLoad);
+//            } catch (IOException e) {
+//                LOGGER.error("Error createType ", e);
+//            }
+//        }
+//    }
+    public static void createType(String index, String type, String parent) throws JsonProcessingException {
         if (!typeExists(index, type)) {
-            String endPoint = index + "/_mapping/" + type;
-            String payLoad = "{\"_parent\": { \"type\": \"" + parent + "\" } }";
+            String endPoint = index + "/_mapping";
+            Map<String, Object> joinField = new HashMap<>();
+            joinField.put("name", parent);
+            Map<String, Object> relations = new HashMap<>();
+            relations.put(parent, type);
+            joinField.put("relations", relations);
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("_join", joinField);
+            Map<String, Object> typeMap = new HashMap<>();
+            typeMap.put(type, properties);
+            Map<String, Object> payLoadMap = new HashMap<>();
+            payLoadMap.put("properties", typeMap);
+            String payLoad = new ObjectMapper().writeValueAsString(payLoadMap);
             try {
                 invokeAPI("PUT", endPoint, payLoad);
             } catch (IOException e) {
@@ -617,8 +706,8 @@ public class ESManager implements Constants {
             }
         }
     }
-    
-    
+
+
     /**
      * added for uploading Child docs where parent id could be dervied from
      * child.
@@ -629,7 +718,7 @@ public class ESManager implements Constants {
      * @param parentKey the parent key
      */
     public static void uploadData(String index, String type, List<Map<String, Object>> docs, String[] parentKey) {
-        String actionTemplate = "{ \"index\" : { \"_index\" : \"%s\", \"_type\" : \"%s\", \"_parent\" : \"%s\" } }%n"; // added
+        String actionTemplate = "{ \"index\" : { \"_index\" : \"%s\", \"type\" : \"%s\", \"_parent\" : \"%s\" } }%n"; // added
                                                                                                                        // _parent
                                                                                                                        // node
 
