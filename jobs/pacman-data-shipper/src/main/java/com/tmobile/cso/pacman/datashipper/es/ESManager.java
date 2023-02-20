@@ -524,6 +524,9 @@ public class ESManager implements Constants {
         filter_path.deleteCharAt(filter_path.length() - 1);
 
         String endPoint = indexName + "/" + type + "/_search?scroll=1m" + filter_path.toString() + "&size=" + _count;
+        if (count == 0) {
+            endPoint = indexName + "/" + type + "/_search?scroll=1m" + filter_path.toString();
+        }
         String payLoad = "{ \"query\": { \"match\": {\"latest\": true}}}";
         Map<String, Map<String, String>> _data = new HashMap<>();
         String scrollId = fetchDataAndScrollId(endPoint, _data, keyField, payLoad);
@@ -703,6 +706,11 @@ public class ESManager implements Constants {
                 invokeAPI("PUT", endPoint, payLoad);
             } catch (IOException e) {
                 LOGGER.error("Error createType ", e);
+                LOGGER.error("Index: {}", index);
+                LOGGER.error("type: {}", type);
+                LOGGER.error("parent: {}", parent);
+                LOGGER.error("payLoad: {}", payLoad);
+
             }
         }
     }
