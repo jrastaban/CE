@@ -37,8 +37,11 @@ import { NotificationObservableService } from "src/app/shared/services/notificat
   providers: [LoggerService, ErrorHandlingService, AdminService],
 })
 export class PoliciesComponent implements OnInit, OnDestroy {
-  pageTitle: String = "Policies";
+  pageTitle: String = "Policy";
   allPolicies: any = [];
+
+  filterTypeLabels = [];
+  filterTagLabels = {};
 
   outerArr: any = [];
   dataLoaded: boolean = false;
@@ -107,7 +110,7 @@ export class PoliciesComponent implements OnInit, OnDestroy {
       },
   }
 
-  paginatorSize: number = 25;
+  paginatorSize: number = 1000;
   isLastPage: boolean;
   isFirstPage: boolean;
   totalPages: number;
@@ -169,6 +172,11 @@ export class PoliciesComponent implements OnInit, OnDestroy {
       this.tableData = state?.data || [];
       this.whiteListColumns = state?.whiteListColumns || Object.keys(this.columnWidths);
       this.tableScrollTop = state?.tableScrollTop;
+      this.filters = state?.filters || [];
+
+      if(this.filters){
+        this.getFiltersData(this.tableData);
+      }
       
       if(this.tableData && this.tableData.length>0){
         this.isStatePreserved = true;
@@ -226,6 +234,32 @@ export class PoliciesComponent implements OnInit, OnDestroy {
     return newData;
   }
 
+  getFiltersData(data){
+    this.filterTypeLabels = [];
+    this.filterTagLabels = {};
+    this.whiteListColumns.forEach(column => {
+      if(column.toLowerCase()=='actions'){
+        return;
+      }
+      let filterTags = [];
+      this.filterTypeLabels.push(column);
+      if(column=='Severity'){
+        filterTags = ["low", "medium", "high", "critical"];
+      }else if(column=='Category'){
+        filterTags = ["security", "cost", "operations", "tagging"];
+      }else{
+        const set = new Set();
+        data.forEach(row => {
+          set.add(row[column].valueText);
+        });
+        filterTags = Array.from(set);
+        filterTags.sort();
+      }
+      
+      this.filterTagLabels[column] = filterTags;
+    });
+  }
+
   getPolicyDetails(isNextPageCalled?) {
     var url = environment.policyDetails.url;
     var method = environment.policyDetails.method;
@@ -261,6 +295,7 @@ export class PoliciesComponent implements OnInit, OnDestroy {
               this.errorMessage = "noDataAvailable";
             }
           }
+          this.getFiltersData(this.tableData);
           this.totalRows = data.totalElements;
           this.dataLoaded = true;
         }
@@ -543,8 +578,9 @@ export class PoliciesComponent implements OnInit, OnDestroy {
       direction: this.direction,
       whiteListColumns: this.whiteListColumns,
       bucketNumber: this.bucketNumber,
-      searchTxt: this.searchTxt,
-      tableScrollTop: event.tableScrollTop
+      searchTxt: event.searchTxt,
+      tableScrollTop: event.tableScrollTop,
+      filters: event.filters
       // filterText: this.filterText
     }
     this.storeState(state);
